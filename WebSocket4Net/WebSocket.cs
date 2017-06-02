@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -12,6 +13,21 @@ using WebSocket4Net.Protocol;
 
 namespace WebSocket4Net
 {
+
+    public class UrlEndPoint : DnsEndPoint
+    {
+        private string _path;
+        public UrlEndPoint(string host, int port, string path) : base(host, port)
+        {
+            _path = path;
+        }
+
+        public override string ToString()
+        {
+            return base.ToString() + _path;
+        }
+    }
+
     public partial class WebSocket : IDisposable
     {
         internal TcpClientSession Client { get; private set; }
@@ -46,6 +62,9 @@ namespace WebSocket4Net
         public int AutoSendPingInterval { get; set; }
 
         protected const string UserAgentKey = "User-Agent";
+
+        protected const string WebSocketExtensionKey = "Sec-WebSocket-Extensions";
+        protected const string DeflateValue = "permessage-deflate;client_max_window_bits=15";
 
         internal IProtocolProcessor ProtocolProcessor { get; private set; }
 
@@ -199,7 +218,8 @@ namespace WebSocket4Net
             if (IPAddress.TryParse(TargetUri.Host, out ipAddress))
                 remoteEndPoint = new IPEndPoint(ipAddress, port);
             else
-                remoteEndPoint = new DnsEndPoint(TargetUri.Host, port);
+                remoteEndPoint = new UrlEndPoint(TargetUri.Host, port, TargetUri.PathAndQuery);
+
 
             return remoteEndPoint;
         }
@@ -264,7 +284,7 @@ namespace WebSocket4Net
         }
 #endif
 
-        private void Initialize(string uri, string subProtocol, List<KeyValuePair<string, string>> cookies, List<KeyValuePair<string, string>> customHeaderItems, string userAgent, string origin, WebSocketVersion version, EndPoint httpConnectProxy, int receiveBufferSize)
+        private void Initialize(string uri, string subProtocol, List<KeyValuePair<string, string>> cookies, List<KeyValuePair<string, string>> customHeaderItems, string userAgent, string origin, WebSocketVersion version, EndPoint httpConnectProxy, int receiveBufferSize, bool enableDeflate)
         {
             if (version == WebSocketVersion.None)
             {
@@ -285,6 +305,13 @@ namespace WebSocket4Net
                     customHeaderItems = new List<KeyValuePair<string, string>>();
 
                 customHeaderItems.Add(new KeyValuePair<string, string>(UserAgentKey, userAgent));
+            }
+            if (enableDeflate)
+            {
+                if (customHeaderItems == null)
+                    customHeaderItems = new List<KeyValuePair<string, string>>();
+
+                customHeaderItems.Add(new KeyValuePair<string, string>(WebSocketExtensionKey, DeflateValue));
             }
 
             if (customHeaderItems != null && customHeaderItems.Count > 0)
@@ -402,6 +429,7 @@ namespace WebSocket4Net
             Client.ClientAccessPolicyProtocol = ClientAccessPolicyProtocol;
 #endif
 #endif
+
             Client.Connect(m_RemoteEndPoint);
         }
 

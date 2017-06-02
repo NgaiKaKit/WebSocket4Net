@@ -24,7 +24,7 @@ namespace WebSocket4Net
             if (sslProtocols != SslProtocols.None)
                 m_SecureProtocols = sslProtocols;
 
-            Initialize(uri, subProtocol, cookies, customHeaderItems, userAgent, origin, version, httpConnectProxy, receiveBufferSize);
+            Initialize(uri, subProtocol, cookies, customHeaderItems, userAgent, origin, version, httpConnectProxy, receiveBufferSize, enableDeflate);
         }
     }
 }
